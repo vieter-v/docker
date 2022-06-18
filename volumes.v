@@ -5,11 +5,23 @@ import net.urllib
 import json
 import time
 
+struct UsageData {
+	size      int [json: Size]
+	ref_count int [json: RefCount]
+}
+
 struct Volume {
-	name       string    [json: Name]
-	driver     string    [json: Driver]
-	mountpoint string    [json: Mountpoint]
-	created_at time.Time [json: CreatedAt]
+	created_at_str string [json: CreatedAt]
+pub mut:
+	name       string            [json: Name]
+	driver     string            [json: Driver]
+	mountpoint string            [json: Mountpoint]
+	created_at time.Time         [skip]
+	status     map[string]string [json: Status]
+	labels     map[string]string [json: Labels]
+	scope      string            [json: Scope]
+	options    map[string]string [json: Options]
+	usage_data UsageData         [json: UsageData]
 }
 
 struct VolumeListResponse {
@@ -27,7 +39,11 @@ pub fn (mut d DockerConn) volume_list() ?VolumeListResponse {
 		return error(data.message)
 	}
 
-	data := json.decode(VolumeListResponse, body)?
+	mut data := json.decode(VolumeListResponse, body)?
+
+	for mut vol in data.volumes {
+		vol.created_at = time.parse_rfc3339(vol.created_at_str)?
+	}
 
 	return data
 }

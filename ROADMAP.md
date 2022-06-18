@@ -61,7 +61,7 @@ reference](https://docs.docker.com/engine/api/v1.41/).
     - [ ] Delete unused networks
 
 * Volumes
-    - [ ] List volumes
+    - [*] List volumes
     - [ ] Create a volume
     - [ ] Inspect a volume
     - [ ] Remove a volume
