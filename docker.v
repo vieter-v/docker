@@ -1,3 +1,5 @@
+module vdocker
+
 import net.unix
 import io
 import net.http
@@ -21,7 +23,7 @@ mut:
 
 // new_conn creates a new connection to the Docker daemon.
 pub fn new_conn() ?&DockerConn {
-	s := unix.connect_stream(socket)?
+	s := unix.connect_stream(vdocker.socket)?
 
 	d := &DockerConn{
 		socket: s
@@ -71,7 +73,7 @@ pub fn (mut d DockerConn) send_request_with_json<T>(method http.Method, url urll
 pub fn (mut d DockerConn) read_response_head() ?http.Response {
 	mut res := []u8{}
 
-	util.read_until_separator(mut d.reader, mut res, http_separator)?
+	util.read_until_separator(mut d.reader, mut res, vdocker.http_separator)?
 
 	return http.parse_response(res.bytestr())
 }
@@ -83,9 +85,9 @@ pub fn (mut d DockerConn) read_response_body(length int) ?string {
 		return ''
 	}
 
-	mut buf := []u8{len: buf_len}
+	mut buf := []u8{len: vdocker.buf_len}
 	mut c := 0
-	mut builder := strings.new_builder(buf_len)
+	mut builder := strings.new_builder(vdocker.buf_len)
 
 	for builder.len < length {
 		c = d.reader.read(mut buf) or { break }

@@ -1,3 +1,5 @@
+module vdocker
+
 import net.http { Method }
 import net.urllib
 import json
