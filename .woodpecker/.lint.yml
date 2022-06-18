@@ -1,0 +1,13 @@
+branches:
+  exclude: [ main ]
+
+platform: 'linux/amd64'
+
+pipeline:
+  lint:
+    image: 'chewingbever/vlang:latest'
+    pull: true
+    commands:
+      - make lint
+    when:
+      event: [ push ]
