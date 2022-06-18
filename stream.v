@@ -1,5 +1,3 @@
-module docker
-
 import io
 import util
 import encoding.binary

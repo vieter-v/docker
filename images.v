@@ -1,5 +1,3 @@
-module docker
-
 import net.http { Method }
 import net.urllib
 import json

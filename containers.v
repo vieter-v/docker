@@ -1,5 +1,3 @@
-module docker
-
 import json
 import net.urllib
 import time
