@@ -8,7 +8,7 @@ This list was taking from the [API
 reference](https://docs.docker.com/engine/api/v1.41/).
 
 * Containers
-    - [ ] List containers
+    - [x] List containers
     - [ ] Create a container
     - [ ] Inspect a container
     - [ ] List processes running inside a container
@@ -61,7 +61,7 @@ reference](https://docs.docker.com/engine/api/v1.41/).
     - [ ] Delete unused networks
 
 * Volumes
-    - [*] List volumes
+    - [x] List volumes
     - [ ] Create a volume
     - [ ] Inspect a volume
     - [ ] Remove a volume

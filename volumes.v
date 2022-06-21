@@ -22,6 +22,14 @@ pub mut:
 	usage_data UsageData         [json: UsageData]
 }
 
+[params]
+pub struct VolumeListFilter {
+	dangling bool
+	driver   string
+	labels   []string
+	name     string
+}
+
 struct VolumeListResponse {
 	volumes  []Volume [json: Volumes]
 	warnings []string [json: Warnings]
@@ -30,7 +38,7 @@ struct VolumeListResponse {
 pub fn (mut d DockerConn) volume_list() ?VolumeListResponse {
 	d.send_request(Method.get, '/volumes')?
 
-    mut data := d.read_json_response<VolumeListResponse>()?
+	mut data := d.read_json_response<VolumeListResponse>()?
 
 	for mut vol in data.volumes {
 		vol.created_at = time.parse_rfc3339(vol.created_at_str)?

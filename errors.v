@@ -1,21 +1,21 @@
 module vdocker
 
 struct DockerError {
-    status int [skip]
+	status  int    [skip]
 	message string
 }
 
 fn (err DockerError) code() int {
-    return err.status
+	return err.status
 }
 
 fn (err DockerError) msg() string {
-    return err.message
+	return err.message
 }
 
 fn docker_error(status int, message string) IError {
-    return IError(DockerError{
-        status: status
-        message: message
-    })
+	return IError(DockerError{
+		status: status
+		message: message
+	})
 }

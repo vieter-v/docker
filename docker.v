@@ -14,8 +14,8 @@ const (
 	buf_len              = 10 * 1024
 	http_separator       = [u8(`\r`), `\n`, `\r`, `\n`]
 	http_chunk_separator = [u8(`\r`), `\n`]
-    timestamp_attr = 'timestamp'
-    api_version = 'v1.41'
+	timestamp_attr       = 'timestamp'
+	api_version          = 'v1.41'
 )
 
 pub struct DockerConn {
@@ -43,7 +43,7 @@ pub fn (mut d DockerConn) close() ? {
 
 // send_request sends an HTTP request without body.
 fn (mut d DockerConn) send_request(method http.Method, url_str string) ? {
-    url := urllib.parse('/$api_version$url_str')?
+	url := urllib.parse('/$vdocker.api_version$url_str')?
 	req := '$method $url.request_uri() HTTP/1.1\nHost: localhost\n\n'
 
 	d.socket.write_string(req)?
@@ -54,7 +54,7 @@ fn (mut d DockerConn) send_request(method http.Method, url_str string) ? {
 
 // send_request_with_body sends an HTTP request with the given body.
 fn (mut d DockerConn) send_request_with_body(method http.Method, url_str string, content_type string, body string) ? {
-    url := urllib.parse('/$api_version$url_str')?
+	url := urllib.parse('/$vdocker.api_version$url_str')?
 	req := '$method $url.request_uri() HTTP/1.1\nHost: localhost\nContent-Type: $content_type\nContent-Length: $body.len\n\n$body\n\n'
 
 	d.socket.write_string(req)?
@@ -127,21 +127,21 @@ fn (mut d DockerConn) read_response() ?(http.Response, string) {
 fn (mut d DockerConn) read_json_response<T>() ?T {
 	head, body := d.read_response()?
 
-        if head.status_code < 200 || head.status_code > 300 {
-            data := json.decode(DockerError, body)?
+	if head.status_code < 200 || head.status_code > 300 {
+		data := json.decode(DockerError, body)?
 
-            return docker_error(head.status_code, data.message)
-        }
+		return docker_error(head.status_code, data.message)
+	}
 
-    mut data := json.decode(T, body)?
+	mut data := json.decode(T, body)?
 
-        /* $for field in T.fields { */
-        /*     $if field.typ is time.Time { */
-        /*         data.$(field.name) = time.parse_rfc3339(data.$(field.name + '_str'))? */
-        /*     } */
-        /* } */
+	//$for field in T.fields {
+	//$if field.typ is time.Time {
+	// data.$(field.name) = time.parse_rfc3339(data.$(field.name + '_str'))?
+	//}
+	//}
 
-    return data
+	return data
 }
 
 // get_chunked_response_reader returns a ChunkedResponseReader using the socket
