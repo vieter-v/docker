@@ -7,12 +7,15 @@ import strings
 import net.urllib
 import json
 import util
+import time
 
 const (
 	socket               = '/var/run/docker.sock'
 	buf_len              = 10 * 1024
 	http_separator       = [u8(`\r`), `\n`, `\r`, `\n`]
 	http_chunk_separator = [u8(`\r`), `\n`]
+    timestamp_attr = 'timestamp'
+    api_version = 'v1.41'
 )
 
 pub struct DockerConn {
@@ -39,7 +42,8 @@ pub fn (mut d DockerConn) close() ? {
 }
 
 // send_request sends an HTTP request without body.
-fn (mut d DockerConn) send_request(method http.Method, url urllib.URL) ? {
+fn (mut d DockerConn) send_request(method http.Method, url_str string) ? {
+    url := urllib.parse('/$api_version$url_str')?
 	req := '$method $url.request_uri() HTTP/1.1\nHost: localhost\n\n'
 
 	d.socket.write_string(req)?
@@ -49,7 +53,8 @@ fn (mut d DockerConn) send_request(method http.Method, url urllib.URL) ? {
 }
 
 // send_request_with_body sends an HTTP request with the given body.
-fn (mut d DockerConn) send_request_with_body(method http.Method, url urllib.URL, content_type string, body string) ? {
+fn (mut d DockerConn) send_request_with_body(method http.Method, url_str string, content_type string, body string) ? {
+    url := urllib.parse('/$api_version$url_str')?
 	req := '$method $url.request_uri() HTTP/1.1\nHost: localhost\nContent-Type: $content_type\nContent-Length: $body.len\n\n$body\n\n'
 
 	d.socket.write_string(req)?
@@ -60,10 +65,10 @@ fn (mut d DockerConn) send_request_with_body(method http.Method, url urllib.URL,
 
 // send_request_with_json<T> is a convenience wrapper around
 // send_request_with_body that encodes the input as JSON.
-fn (mut d DockerConn) send_request_with_json<T>(method http.Method, url urllib.URL, data &T) ? {
+fn (mut d DockerConn) send_request_with_json<T>(method http.Method, url_str string, data &T) ? {
 	body := json.encode(data)
 
-	return d.send_request_with_body(method, url, 'application/json', body)
+	return d.send_request_with_body(method, url_str, 'application/json', body)
 }
 
 // read_response_head consumes the socket's contents until it encounters
@@ -117,6 +122,26 @@ fn (mut d DockerConn) read_response() ?(http.Response, string) {
 	res := d.read_response_body(content_length)?
 
 	return head, res
+}
+
+fn (mut d DockerConn) read_json_response<T>() ?T {
+	head, body := d.read_response()?
+
+        if head.status_code < 200 || head.status_code > 300 {
+            data := json.decode(DockerError, body)?
+
+            return docker_error(head.status_code, data.message)
+        }
+
+    mut data := json.decode(T, body)?
+
+        /* $for field in T.fields { */
+        /*     $if field.typ is time.Time { */
+        /*         data.$(field.name) = time.parse_rfc3339(data.$(field.name + '_str'))? */
+        /*     } */
+        /* } */
+
+    return data
 }
 
 // get_chunked_response_reader returns a ChunkedResponseReader using the socket

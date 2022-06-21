@@ -1,12 +1,15 @@
 module vdocker
 
 import json
-import net.urllib
 import time
 import net.http { Method }
 
-struct DockerError {
-	message string
+pub struct ContainerListItem {
+    id string [json: Id]
+    names []string [json: Names]
+    image string [json: Image]
+    image_id string [json: ImageID]
+    command string [json: Command]
 }
 
 pub struct NewContainer {
@@ -26,7 +29,7 @@ pub:
 
 // create_container creates a new container with the given config.
 pub fn (mut d DockerConn) create_container(c NewContainer) ?CreatedContainer {
-	d.send_request_with_json(Method.post, urllib.parse('/v1.41/containers/create')?, c)?
+	d.send_request_with_json(Method.post, '/containers/create', c)?
 	head, res := d.read_response()?
 
 	if head.status_code != 201 {
@@ -42,7 +45,7 @@ pub fn (mut d DockerConn) create_container(c NewContainer) ?CreatedContainer {
 
 // start_container starts the container with the given id.
 pub fn (mut d DockerConn) start_container(id string) ? {
-	d.send_request(Method.post, urllib.parse('/v1.41/containers/$id/start')?)?
+	d.send_request(Method.post, 'containers/$id/start')?
 	head, body := d.read_response()?
 
 	if head.status_code != 204 {
@@ -72,7 +75,7 @@ pub mut:
 
 // inspect_container returns detailed information for a given container.
 pub fn (mut d DockerConn) inspect_container(id string) ?ContainerInspect {
-	d.send_request(Method.get, urllib.parse('/v1.41/containers/$id/json')?)?
+	d.send_request(Method.get, 'containers/$id/json')?
 	head, body := d.read_response()?
 
 	if head.status_code != 200 {
@@ -95,7 +98,7 @@ pub fn (mut d DockerConn) inspect_container(id string) ?ContainerInspect {
 
 // remove_container removes the container with the given id.
 pub fn (mut d DockerConn) remove_container(id string) ? {
-	d.send_request(Method.delete, urllib.parse('/v1.41/containers/$id')?)?
+	d.send_request(Method.delete, 'containers/$id')?
 	head, body := d.read_response()?
 
 	if head.status_code != 204 {
@@ -108,7 +111,7 @@ pub fn (mut d DockerConn) remove_container(id string) ? {
 // get_container_logs returns a reader object allowing access to the
 // container's logs.
 pub fn (mut d DockerConn) get_container_logs(id string) ?&StreamFormatReader {
-	d.send_request(Method.get, urllib.parse('/v1.41/containers/$id/logs?stdout=true&stderr=true')?)?
+	d.send_request(Method.get, 'containers/$id/logs?stdout=true&stderr=true')?
 	head := d.read_response_head()?
 
 	if head.status_code != 200 {
