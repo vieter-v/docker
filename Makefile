@@ -22,9 +22,6 @@ api-docs:
 .PHONY: lint
 lint:
 	$(V) fmt -verify .
-	$(V) vet -W .
-	$(V_PATH) missdoc -p .
-	@ [ $$($(V_PATH) missdoc -p . | wc -l) = 0 ]
 
 .PHONY: fmt
 fmt:

@@ -7,7 +7,6 @@ import strings
 import net.urllib
 import json
 import util
-import time
 
 const (
 	socket               = '/var/run/docker.sock'
