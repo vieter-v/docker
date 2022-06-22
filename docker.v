@@ -1,4 +1,4 @@
-module vdocker
+module docker
 
 import net.unix
 import io
@@ -25,7 +25,7 @@ mut:
 
 // new_conn creates a new connection to the Docker daemon.
 pub fn new_conn() ?&DockerConn {
-	s := unix.connect_stream(vdocker.socket)?
+	s := unix.connect_stream(docker.socket)?
 
 	d := &DockerConn{
 		socket: s
@@ -42,7 +42,7 @@ pub fn (mut d DockerConn) close() ? {
 
 // send_request sends an HTTP request without body.
 fn (mut d DockerConn) send_request(method http.Method, url_str string) ? {
-	url := urllib.parse('/$vdocker.api_version$url_str')?
+	url := urllib.parse('/$docker.api_version$url_str')?
 	req := '$method $url.request_uri() HTTP/1.1\nHost: localhost\n\n'
 
 	d.socket.write_string(req)?
@@ -53,7 +53,7 @@ fn (mut d DockerConn) send_request(method http.Method, url_str string) ? {
 
 // send_request_with_body sends an HTTP request with the given body.
 fn (mut d DockerConn) send_request_with_body(method http.Method, url_str string, content_type string, body string) ? {
-	url := urllib.parse('/$vdocker.api_version$url_str')?
+	url := urllib.parse('/$docker.api_version$url_str')?
 	req := '$method $url.request_uri() HTTP/1.1\nHost: localhost\nContent-Type: $content_type\nContent-Length: $body.len\n\n$body\n\n'
 
 	d.socket.write_string(req)?
@@ -77,7 +77,7 @@ fn (mut d DockerConn) send_request_with_json<T>(method http.Method, url_str stri
 fn (mut d DockerConn) read_response_head() ?http.Response {
 	mut res := []u8{}
 
-	util.read_until_separator(mut d.reader, mut res, vdocker.http_separator)?
+	util.read_until_separator(mut d.reader, mut res, docker.http_separator)?
 
 	return http.parse_response(res.bytestr())
 }
@@ -89,9 +89,9 @@ fn (mut d DockerConn) read_response_body(length int) ?string {
 		return ''
 	}
 
-	mut buf := []u8{len: vdocker.buf_len}
+	mut buf := []u8{len: docker.buf_len}
 	mut c := 0
-	mut builder := strings.new_builder(vdocker.buf_len)
+	mut builder := strings.new_builder(docker.buf_len)
 
 	for builder.len < length {
 		c = d.reader.read(mut buf) or { break }

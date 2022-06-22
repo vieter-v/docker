@@ -1,4 +1,4 @@
-module vdocker
+module docker
 
 import net.http { Method }
 import json

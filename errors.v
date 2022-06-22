@@ -1,4 +1,4 @@
-module vdocker
+module docker
 
 struct DockerError {
 	status  int    [skip]
