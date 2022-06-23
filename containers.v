@@ -37,18 +37,11 @@ pub:
 }
 
 pub fn (mut d DockerConn) container_create(c NewContainer) ?CreatedContainer {
-	d.send_request_with_json(Method.post, '/containers/create', c)?
-	head, res := d.read_response()?
+    d.post('/containers/create')
+    d.json(c)
+    d.send()?
 
-	if head.status_code != 201 {
-		data := json.decode(DockerError, res)?
-
-		return error(data.message)
-	}
-
-	data := json.decode(CreatedContainer, res)?
-
-	return data
+    return d.read_json_response<CreatedContainer>()
 }
 
 // start_container starts the container with the given id.
@@ -103,8 +96,18 @@ pub fn (mut d DockerConn) container_inspect(id string) ?ContainerInspect {
 	return data
 }
 
-pub fn (mut d DockerConn) container_remove(id string) ? {
-	d.send_request(Method.delete, '/containers/$id')?
+[params]
+pub struct ContainerRemoveConfig {
+    v bool
+    force bool
+    link bool
+}
+
+pub fn (mut d DockerConn) container_remove(id string, c ContainerRemoveConfig) ? {
+	d.request(Method.delete, '/containers/$id')
+    d.params(c)
+    d.send()?
+
 	head, body := d.read_response()?
 
 	if head.status_code != 204 {
@@ -114,8 +117,22 @@ pub fn (mut d DockerConn) container_remove(id string) ? {
 	}
 }
 
-pub fn (mut d DockerConn) container_get_logs(id string) ?&StreamFormatReader {
-	d.send_request(Method.get, '/containers/$id/logs?stdout=true&stderr=true')?
+[params]
+pub struct ContainerGetLogsConfig {
+    follow bool
+    stdout bool
+    stderr bool
+    since int
+    until int
+    timestamps bool
+    tail string = "all"
+}
+
+pub fn (mut d DockerConn) container_get_logs(id string, c ContainerGetLogsConfig) ?&StreamFormatReader {
+	d.get('/containers/$id/logs')
+    d.params(c)
+    d.send()?
+
 	head := d.read_response_head()?
 
 	if head.status_code != 200 {
