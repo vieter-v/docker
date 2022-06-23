@@ -1,3 +1,4 @@
 *.so
 
 _docs/
+vls.log

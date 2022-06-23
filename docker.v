@@ -17,10 +17,17 @@ const (
 	api_version          = 'v1.41'
 )
 
+[heap]
 pub struct DockerConn {
 mut:
 	socket &unix.StreamConn
 	reader &io.BufferedReader
+	// Data for the request that's currently being constructed.
+	method       http.Method
+	url          string
+	params       map[string]string
+	content_type string
+	body         string
 }
 
 // new_conn creates a new connection to the Docker daemon.
