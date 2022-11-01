@@ -26,7 +26,7 @@ fn (mut d DockerConn) params<T>(o T) {
 	}
 }
 
-fn (mut d DockerConn) send() ? {
+fn (mut d DockerConn) send() ! {
 	mut full_url := d.url
 
 	if d.params.len > 0 {
@@ -35,7 +35,7 @@ fn (mut d DockerConn) send() ? {
 	}
 
 	// This is to make sure we actually created a valid URL
-	parsed_url := urllib.parse(full_url)?
+	parsed_url := urllib.parse(full_url)!
 	final_url := parsed_url.request_uri()
 
 	req := if d.body == '' {
@@ -44,7 +44,7 @@ fn (mut d DockerConn) send() ? {
 		'$d.method $final_url HTTP/1.1\nHost: localhost\nContent-Type: $d.content_type\nContent-Length: $d.body.len\n\n$d.body\n\n'
 	}
 
-	d.socket.write_string(req)?
+	d.socket.write_string(req)!
 
 	// When starting a new request, the reader needs to be reset.
 	d.reader = io.new_buffered_reader(reader: d.socket)

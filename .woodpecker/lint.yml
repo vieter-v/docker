@@ -1,0 +1,19 @@
+branches:
+  exclude: [ main ]
+
+platform: 'linux/amd64'
+
+pipeline:
+  build:
+    image: 'git.rustybever.be/chewing_bever/vlang:0.3.2'
+    commands:
+      - make
+    when:
+      event: [ push ]
+
+  lint:
+    image: 'git.rustybever.be/chewing_bever/vlang:0.3.2'
+    commands:
+      - make lint
+    when:
+      event: [ push ]
