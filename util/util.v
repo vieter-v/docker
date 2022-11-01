@@ -3,7 +3,7 @@ module util
 import io
 
 // reader_to_writer tries to consume the entire reader & write it to the writer.
-pub fn reader_to_writer(mut reader io.Reader, mut writer io.Writer) ? {
+pub fn reader_to_writer(mut reader io.Reader, mut writer io.Writer) ! {
 	mut buf := []u8{len: 10 * 1024}
 
 	for {
@@ -39,11 +39,11 @@ pub fn match_array_in_array<T>(a1 []T, a2 []T) int {
 
 // read_until_separator consumes an io.Reader until it encounters some
 // separator array. The data read is stored inside the provided res array.
-pub fn read_until_separator(mut reader io.Reader, mut res []u8, sep []u8) ? {
+pub fn read_until_separator(mut reader io.Reader, mut res []u8, sep []u8) ! {
 	mut buf := []u8{len: sep.len}
 
 	for {
-		c := reader.read(mut buf)?
+		c := reader.read(mut buf)!
 		res << buf[..c]
 
 		match_len := match_array_in_array(buf[..c], sep)
@@ -54,7 +54,7 @@ pub fn read_until_separator(mut reader io.Reader, mut res []u8, sep []u8) ? {
 
 		if match_len > 0 {
 			match_left := sep.len - match_len
-			c2 := reader.read(mut buf[..match_left])?
+			c2 := reader.read(mut buf[..match_left])!
 			res << buf[..c2]
 
 			if buf[..c2] == sep[match_len..] {

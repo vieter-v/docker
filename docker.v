@@ -24,8 +24,8 @@ mut:
 }
 
 // new_conn creates a new connection to the Docker daemon.
-pub fn new_conn() ?&DockerConn {
-	s := unix.connect_stream(docker.socket)?
+pub fn new_conn() !&DockerConn {
+	s := unix.connect_stream(docker.socket)!
 
 	d := &DockerConn{
 		socket: s
@@ -36,27 +36,27 @@ pub fn new_conn() ?&DockerConn {
 }
 
 // close closes the underlying socket connection.
-pub fn (mut d DockerConn) close() ? {
-	d.socket.close()?
+pub fn (mut d DockerConn) close() ! {
+	d.socket.close()!
 }
 
 // send_request sends an HTTP request without body.
-fn (mut d DockerConn) send_request(method http.Method, url_str string) ? {
-	url := urllib.parse('/$docker.api_version$url_str')?
+fn (mut d DockerConn) send_request(method http.Method, url_str string) ! {
+	url := urllib.parse('/$docker.api_version$url_str')!
 	req := '$method $url.request_uri() HTTP/1.1\nHost: localhost\n\n'
 
-	d.socket.write_string(req)?
+	d.socket.write_string(req)!
 
 	// When starting a new request, the reader needs to be reset.
 	d.reader = io.new_buffered_reader(reader: d.socket)
 }
 
 // send_request_with_body sends an HTTP request with the given body.
-fn (mut d DockerConn) send_request_with_body(method http.Method, url_str string, content_type string, body string) ? {
-	url := urllib.parse('/$docker.api_version$url_str')?
+fn (mut d DockerConn) send_request_with_body(method http.Method, url_str string, content_type string, body string) ! {
+	url := urllib.parse('/$docker.api_version$url_str')!
 	req := '$method $url.request_uri() HTTP/1.1\nHost: localhost\nContent-Type: $content_type\nContent-Length: $body.len\n\n$body\n\n'
 
-	d.socket.write_string(req)?
+	d.socket.write_string(req)!
 
 	// When starting a new request, the reader needs to be reset.
 	d.reader = io.new_buffered_reader(reader: d.socket)
@@ -64,7 +64,7 @@ fn (mut d DockerConn) send_request_with_body(method http.Method, url_str string,
 
 // send_request_with_json<T> is a convenience wrapper around
 // send_request_with_body that encodes the input as JSON.
-fn (mut d DockerConn) send_request_with_json<T>(method http.Method, url_str string, data &T) ? {
+fn (mut d DockerConn) send_request_with_json<T>(method http.Method, url_str string, data &T) ! {
 	body := json.encode(data)
 
 	return d.send_request_with_body(method, url_str, 'application/json', body)
@@ -74,17 +74,17 @@ fn (mut d DockerConn) send_request_with_json<T>(method http.Method, url_str stri
 // '\r\n\r\n', after which it parses the response as an HTTP response.
 // Importantly, this function never consumes the reader past the HTTP
 // separator, so the body can be read fully later on.
-fn (mut d DockerConn) read_response_head() ?http.Response {
+fn (mut d DockerConn) read_response_head() !http.Response {
 	mut res := []u8{}
 
-	util.read_until_separator(mut d.reader, mut res, docker.http_separator)?
+	util.read_until_separator(mut d.reader, mut res, docker.http_separator)!
 
 	return http.parse_response(res.bytestr())
 }
 
 // read_response_body reads `length` bytes from the stream. It can be used when
 // the response encoding isn't chunked to fully read it.
-fn (mut d DockerConn) read_response_body(length int) ?string {
+fn (mut d DockerConn) read_response_body(length int) !string {
 	if length == 0 {
 		return ''
 	}
@@ -96,7 +96,7 @@ fn (mut d DockerConn) read_response_body(length int) ?string {
 	for builder.len < length {
 		c = d.reader.read(mut buf) or { break }
 
-		builder.write(buf[..c])?
+		builder.write(buf[..c])!
 	}
 
 	return builder.str()
@@ -105,34 +105,34 @@ fn (mut d DockerConn) read_response_body(length int) ?string {
 // read_response is a convenience function which always consumes the entire
 // response & returns it. It should only be used when we're certain that the
 // result isn't too large.
-fn (mut d DockerConn) read_response() ?(http.Response, string) {
-	head := d.read_response_head()?
+fn (mut d DockerConn) read_response() !(http.Response, string) {
+	head := d.read_response_head()!
 
 	if head.header.get(http.CommonHeader.transfer_encoding) or { '' } == 'chunked' {
 		mut builder := strings.new_builder(1024)
 		mut body := d.get_chunked_response_reader()
 
-		util.reader_to_writer(mut body, mut builder)?
+		util.reader_to_writer(mut body, mut builder)!
 
 		return head, builder.str()
 	}
 
-	content_length := head.header.get(http.CommonHeader.content_length)?.int()
-	res := d.read_response_body(content_length)?
+	content_length := head.header.get(http.CommonHeader.content_length)!.int()
+	res := d.read_response_body(content_length)!
 
 	return head, res
 }
 
-fn (mut d DockerConn) read_json_response<T>() ?T {
-	head, body := d.read_response()?
+fn (mut d DockerConn) read_json_response<T>() !T {
+	head, body := d.read_response()!
 
 	if head.status_code < 200 || head.status_code > 300 {
-		data := json.decode(DockerError, body)?
+		data := json.decode(DockerError, body)!
 
 		return docker_error(head.status_code, data.message)
 	}
 
-	mut data := json.decode(T, body)?
+	mut data := json.decode(T, body)!
 
 	//$for field in T.fields {
 	//$if field.typ is time.Time {

@@ -25,11 +25,11 @@ pub fn new_chunked_response_reader(reader io.BufferedReader) &ChunkedResponseRea
 }
 
 // read satisfies the io.Reader interface.
-pub fn (mut r ChunkedResponseReader) read(mut buf []u8) ?int {
+pub fn (mut r ChunkedResponseReader) read(mut buf []u8) !int {
 	if r.bytes_left_in_chunk == 0 {
 		// An io.BufferedReader always returns none if its stream has
 		// ended.
-		r.bytes_left_in_chunk = r.read_chunk_size()?
+		r.bytes_left_in_chunk = r.read_chunk_size()!
 	}
 
 	mut c := 0
@@ -37,9 +37,9 @@ pub fn (mut r ChunkedResponseReader) read(mut buf []u8) ?int {
 	// Make sure we don't read more than we can safely read. This is to avoid
 	// the underlying reader from becoming out of sync with our parsing:
 	if buf.len > r.bytes_left_in_chunk {
-		c = r.reader.read(mut buf[..r.bytes_left_in_chunk])?
+		c = r.reader.read(mut buf[..r.bytes_left_in_chunk])!
 	} else {
-		c = r.reader.read(mut buf)?
+		c = r.reader.read(mut buf)!
 	}
 
 	r.bytes_left_in_chunk -= u64(c)
@@ -50,21 +50,21 @@ pub fn (mut r ChunkedResponseReader) read(mut buf []u8) ?int {
 // read_chunk_size advances the reader & reads the size of the next HTTP chunk.
 // This function should only be called if the previous chunk has been
 // completely consumed.
-fn (mut r ChunkedResponseReader) read_chunk_size() ?u64 {
+fn (mut r ChunkedResponseReader) read_chunk_size() !u64 {
 	if r.started {
 		mut buf := []u8{len: 2}
 
 		// Each chunk ends with a `\r\n` which we want to skip first
-		r.reader.read(mut buf)?
+		r.reader.read(mut buf)!
 	}
 
 	r.started = true
 
 	mut res := []u8{}
-	util.read_until_separator(mut r.reader, mut res, http_chunk_separator)?
+	util.read_until_separator(mut r.reader, mut res, http_chunk_separator)!
 
 	// The length of the next chunk is provided as a hexadecimal
-	mut num_data := hex.decode(res#[..-2].bytestr())?
+	mut num_data := hex.decode(res#[..-2].bytestr())!
 
 	for num_data.len < 8 {
 		num_data.insert(0, 0)
@@ -75,7 +75,7 @@ fn (mut r ChunkedResponseReader) read_chunk_size() ?u64 {
 	// This only occurs for the very last chunk, which always reports a size of
 	// 0.
 	if num == 0 {
-		return none
+		return error('end of stream')
 	}
 
 	return num
@@ -100,17 +100,17 @@ pub fn new_stream_format_reader(reader ChunkedResponseReader) &StreamFormatReade
 }
 
 // read satisfies the io.Reader interface.
-pub fn (mut r StreamFormatReader) read(mut buf []u8) ?int {
+pub fn (mut r StreamFormatReader) read(mut buf []u8) !int {
 	if r.bytes_left_in_chunk == 0 {
-		r.bytes_left_in_chunk = r.read_chunk_size()?
+		r.bytes_left_in_chunk = r.read_chunk_size()!
 	}
 
 	mut c := 0
 
 	if buf.len > r.bytes_left_in_chunk {
-		c = r.reader.read(mut buf[..r.bytes_left_in_chunk])?
+		c = r.reader.read(mut buf[..r.bytes_left_in_chunk])!
 	} else {
-		c = r.reader.read(mut buf)?
+		c = r.reader.read(mut buf)!
 	}
 
 	r.bytes_left_in_chunk -= u32(c)
@@ -120,15 +120,15 @@ pub fn (mut r StreamFormatReader) read(mut buf []u8) ?int {
 
 // read_chunk_size advances the reader & reads the header bytes for the length
 // of the next chunk.
-fn (mut r StreamFormatReader) read_chunk_size() ?u32 {
+fn (mut r StreamFormatReader) read_chunk_size() !u32 {
 	mut buf := []u8{len: 8}
 
-	r.reader.read(mut buf)?
+	r.reader.read(mut buf)!
 
 	num := binary.big_endian_u32(buf[4..])
 
 	if num == 0 {
-		return none
+		return error('end of stream')
 	}
 
 	return num
