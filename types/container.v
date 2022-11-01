@@ -75,37 +75,37 @@ pub:
 
 pub struct HealthConfig {
 pub:
-    test []string [json: Test]
-    interval int [json: Interval]
-    timeout int [json: Timeout]
-    retries int [json: Retries]
-    start_period int [json: StartPeriod]
+	test         []string [json: Test]
+	interval     int      [json: Interval]
+	timeout      int      [json: Timeout]
+	retries      int      [json: Retries]
+	start_period int      [json: StartPeriod]
 }
 
 pub struct ContainerCreate {
 pub:
-    hostname string [json: Hostname]
-    domain_name string [json: Domainname]
-    user string [json: User]
-    attach_stdin bool [json: AttachStdin]
-    attach_stdout bool [json: AttachStderr] = true
-    // ExposedPorts
-    tty bool [json: Tty]
-    open_stdin bool [json: OpenStdin]
-    stdin_once bool [json: StdinOnce]
-    env []string [json: Env]
-    cmd []string [json: Cmd]
-    healthcheck HealthConfig [json: Healthcheck]
-    args_escaped bool [json: ArgsEscaped]
-    image string [json: Image]
-    // Volumes
-    working_dir string [json: WorkingDir]
-    entrypoint []string [json: Entrypoint]
-    network_disabled bool [json: NetworkDisabled]
-    mac_address string [json: MacAddress]
-    on_build []string [json: OnBuild]
-    labels map[string]string [json: Labels]
-    stop_signal string [json: StopSignal]
-    stop_timeout int [json: StopTimeout]
-    shell []string [json: Shell]
+	hostname      string [json: Hostname]
+	domain_name   string [json: Domainname]
+	user          string [json: User]
+	attach_stdin  bool   [json: AttachStdin]
+	attach_stdout bool   [json: AttachStderr] = true
+	// ExposedPorts
+	tty          bool         [json: Tty]
+	open_stdin   bool         [json: OpenStdin]
+	stdin_once   bool         [json: StdinOnce]
+	env          []string     [json: Env]
+	cmd          []string     [json: Cmd]
+	healthcheck  HealthConfig [json: Healthcheck]
+	args_escaped bool         [json: ArgsEscaped]
+	image        string       [json: Image]
+	// Volumes
+	working_dir      string            [json: WorkingDir]
+	entrypoint       []string          [json: Entrypoint]
+	network_disabled bool              [json: NetworkDisabled]
+	mac_address      string            [json: MacAddress]
+	on_build         []string          [json: OnBuild]
+	labels           map[string]string [json: Labels]
+	stop_signal      string            [json: StopSignal]
+	stop_timeout     int               [json: StopTimeout]
+	shell            []string          [json: Shell]
 }
