@@ -115,6 +115,11 @@ fn (mut d DockerConn) read_response_body(length int) !string {
 fn (mut d DockerConn) read_response() !(http.Response, string) {
 	head := d.read_response_head()!
 
+    // 204 means "No Content", so we can assume nothing follows after this
+    if head.status_code == 204 {
+        return head, ''      
+    }
+
 	if head.header.get(http.CommonHeader.transfer_encoding) or { '' } == 'chunked' {
 		mut builder := strings.new_builder(1024)
 		mut body := d.get_chunked_response_reader()
