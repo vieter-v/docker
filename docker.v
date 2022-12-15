@@ -115,14 +115,14 @@ fn (mut d DockerConn) read_response_body(length int) !string {
 fn (mut d DockerConn) read_response() !(http.Response, string) {
 	head := d.read_response_head()!
 
-    if head.status().is_error() {
-        content_length := head.header.get(.content_length)!.int()
-        body := d.read_response_body(content_length)!
+	if head.status().is_error() {
+		content_length := head.header.get(.content_length)!.int()
+		body := d.read_response_body(content_length)!
 		mut err := json.decode(DockerError, body)!
-        err.status = head.status_code
+		err.status = head.status_code
 
-        return err
-    }
+		return err
+	}
 
 	// 204 means "No Content", so we can assume nothing follows after this
 	if head.status() == .no_content {

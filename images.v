@@ -1,11 +1,16 @@
 module docker
 
 import net.http { Method }
+import types { Image }
 import json
 
-struct Image {
-pub:
-	id string [json: Id]
+pub fn (mut d DockerConn) image_inspect(image string) !Image {
+	d.send_request(.get, '/images/$image/json')!
+	_, body := d.read_response()!
+
+	data := json.decode(Image, body)!
+
+	return data
 }
 
 // pull_image pulls the given image:tag.
@@ -17,7 +22,7 @@ pub fn (mut d DockerConn) pull_image(image string, tag string) ! {
 		content_length := head.header.get(.content_length)!.int()
 		body := d.read_response_body(content_length)!
 		mut err := json.decode(DockerError, body)!
-        err.status = head.status_code
+		err.status = head.status_code
 
 		return err
 	}
