@@ -13,12 +13,13 @@ pub fn (mut d DockerConn) pull_image(image string, tag string) ! {
 	d.send_request(Method.post, '/images/create?fromImage=$image&tag=$tag')!
 	head := d.read_response_head()!
 
-	if head.status_code != 200 {
-		content_length := head.header.get(http.CommonHeader.content_length)!.int()
+	if head.status().is_error() {
+		content_length := head.header.get(.content_length)!.int()
 		body := d.read_response_body(content_length)!
-		data := json.decode(DockerError, body)!
+		mut err := json.decode(DockerError, body)!
+        err.status = head.status_code
 
-		return error(data.message)
+		return err
 	}
 
 	// Keep reading the body until the pull has completed
@@ -33,14 +34,8 @@ pub fn (mut d DockerConn) pull_image(image string, tag string) ! {
 
 // create_image_from_container creates a new image from a container.
 pub fn (mut d DockerConn) create_image_from_container(id string, repo string, tag string) !Image {
-	d.send_request(Method.post, '/commit?container=$id&repo=$repo&tag=$tag')!
-	head, body := d.read_response()!
-
-	if head.status_code != 201 {
-		data := json.decode(DockerError, body)!
-
-		return error(data.message)
-	}
+	d.send_request(.post, '/commit?container=$id&repo=$repo&tag=$tag')!
+	_, body := d.read_response()!
 
 	data := json.decode(Image, body)!
 
@@ -49,12 +44,6 @@ pub fn (mut d DockerConn) create_image_from_container(id string, repo string, ta
 
 // remove_image removes the image with the given id.
 pub fn (mut d DockerConn) remove_image(id string) ! {
-	d.send_request(Method.delete, '/images/$id')!
-	head, body := d.read_response()!
-
-	if head.status_code != 200 {
-		data := json.decode(DockerError, body)!
-
-		return error(data.message)
-	}
+	d.send_request(.delete, '/images/$id')!
+	d.read_response()!
 }
