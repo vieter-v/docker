@@ -81,6 +81,8 @@ fn (mut d DockerConn) read_response_body() ! {
 		content_length := d.head.header.get(.content_length)!.int()
 
 		if content_length == 0 {
+            d.body = ''
+
 			return
 		}
 
