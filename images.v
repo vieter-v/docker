@@ -12,8 +12,8 @@ pub fn (mut d DockerConn) image_inspect(image string) !Image {
 	return data
 }
 
-// pull_image pulls the given image:tag.
-pub fn (mut d DockerConn) pull_image(image string, tag string) ! {
+// image_pull pulls the given image:tag.
+pub fn (mut d DockerConn) image_pull(image string, tag string) ! {
 	d.request(.post, '/images/create', {
 		'fromImage': image
 		'tag':       tag
@@ -33,7 +33,7 @@ pub fn (mut d DockerConn) pull_image(image string, tag string) ! {
 }
 
 // create_image_from_container creates a new image from a container.
-pub fn (mut d DockerConn) create_image_from_container(id string, repo string, tag string) !Image {
+pub fn (mut d DockerConn) image_from_container(id string, repo string, tag string) !Image {
 	d.request(.post, '/commit', {
 		'container': id
 		'repo':      repo
@@ -45,7 +45,7 @@ pub fn (mut d DockerConn) create_image_from_container(id string, repo string, ta
 }
 
 // remove_image removes the image with the given id.
-pub fn (mut d DockerConn) remove_image(id string) ! {
+pub fn (mut d DockerConn) image_remove(id string) ! {
 	d.request(.delete, '/images/$id', {})
 	d.send()!
 	d.read_response()!
