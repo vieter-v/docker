@@ -1,6 +1,6 @@
 module docker
 
-import net.http { Method }
+import net.http
 import time
 
 struct UsageData {
@@ -36,7 +36,8 @@ struct VolumeListResponse {
 }
 
 pub fn (mut d DockerConn) volume_list() !VolumeListResponse {
-	d.send_request(Method.get, '/volumes')!
+	d.request(.get, '/volumes', {})
+	d.send()!
 
 	mut data := d.read_json_response<VolumeListResponse>()!
 

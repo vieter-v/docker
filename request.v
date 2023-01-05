@@ -3,17 +3,29 @@ module docker
 import net.http
 import net.urllib
 import io
+import json
 
-fn (mut d DockerConn) request(method http.Method, url_str string) {
+fn (mut d DockerConn) request(method http.Method, url string, params map[string]string) {
 	d.method = method
-	d.url = url_str
-	d.params.clear()
+	d.url = url
 	d.content_type = ''
 	d.body = ''
+
+	d.params.clear()
+
+	for key, value in params {
+		d.params[key] = urllib.query_escape(value.replace("'", '"'))
+	}
 }
 
-fn (mut d DockerConn) get(url_str string) {
-	d.request(http.Method.get, url_str)
+fn (mut d DockerConn) body(content_type string, body string) {
+	d.content_type = content_type
+	d.body = body
+}
+
+fn (mut d DockerConn) body_json<T>(data T) {
+	d.content_type = 'application/json'
+	d.body = json.encode(data)
 }
 
 fn (mut d DockerConn) params<T>(o T) {

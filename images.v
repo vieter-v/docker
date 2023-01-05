@@ -1,10 +1,11 @@
 module docker
 
-import net.http { Method }
+import net.http
 import types { Image }
 
 pub fn (mut d DockerConn) image_inspect(image string) !Image {
-	d.send_request(.get, '/images/$image/json')!
+	d.request(.get, '/images/$image/json', {})
+	d.send()!
 
 	data := d.read_json_response<Image>()!
 
@@ -13,7 +14,11 @@ pub fn (mut d DockerConn) image_inspect(image string) !Image {
 
 // pull_image pulls the given image:tag.
 pub fn (mut d DockerConn) pull_image(image string, tag string) ! {
-	d.send_request(Method.post, '/images/create?fromImage=$image&tag=$tag')!
+	d.request(.post, '/images/create', {
+		'fromImage': image
+		'tag':       tag
+	})
+	d.send()!
 	d.read_response_head()!
 	d.check_error()!
 
@@ -29,14 +34,19 @@ pub fn (mut d DockerConn) pull_image(image string, tag string) ! {
 
 // create_image_from_container creates a new image from a container.
 pub fn (mut d DockerConn) create_image_from_container(id string, repo string, tag string) !Image {
-	d.send_request(.post, '/commit?container=$id&repo=$repo&tag=$tag')!
-	data := d.read_json_response<Image>()!
+	d.request(.post, '/commit', {
+		'container': id
+		'repo':      repo
+		'tag':       tag
+	})
+	d.send()!
 
-	return data
+	return d.read_json_response<Image>()!
 }
 
 // remove_image removes the image with the given id.
 pub fn (mut d DockerConn) remove_image(id string) ! {
-	d.send_request(.delete, '/images/$id')!
+	d.request(.delete, '/images/$id', {})
+	d.send()!
 	d.read_response()!
 }

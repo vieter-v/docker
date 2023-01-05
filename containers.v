@@ -1,7 +1,7 @@
 module docker
 
 import time
-import net.http { Method }
+import net.http
 import types { ContainerListItem }
 
 [params]
@@ -13,7 +13,7 @@ pub struct ContainerListConfig {
 }
 
 pub fn (mut d DockerConn) container_list(c ContainerListConfig) ![]ContainerListItem {
-	d.get('/containers/json')
+	d.request(.get, '/containers/json', {})
 	d.params(c)
 	d.send()!
 
@@ -36,14 +36,17 @@ pub:
 }
 
 pub fn (mut d DockerConn) container_create(c NewContainer) !CreatedContainer {
-	d.send_request_with_json(Method.post, '/containers/create', c)!
+	d.request(.post, '/containers/create', {})
+	d.body_json(c)
+	d.send()!
 
 	return d.read_json_response<CreatedContainer>()
 }
 
 // start_container starts the container with the given id.
 pub fn (mut d DockerConn) container_start(id string) ! {
-	d.send_request(Method.post, '/containers/$id/start')!
+	d.request(.post, '/containers/$id/start', {})
+	d.send()!
 	d.read_response()!
 }
 
@@ -66,7 +69,8 @@ pub mut:
 }
 
 pub fn (mut d DockerConn) container_inspect(id string) !ContainerInspect {
-	d.send_request(Method.get, '/containers/$id/json')!
+	d.request(.get, '/containers/$id/json', {})
+	d.send()!
 
 	mut data := d.read_json_response<ContainerInspect>()!
 
@@ -81,12 +85,17 @@ pub fn (mut d DockerConn) container_inspect(id string) !ContainerInspect {
 }
 
 pub fn (mut d DockerConn) container_remove(id string) ! {
-	d.send_request(Method.delete, '/containers/$id')!
+	d.request(.delete, '/containers/$id', {})
+	d.send()!
 	d.read_response()!
 }
 
 pub fn (mut d DockerConn) container_get_logs(id string) !&StreamFormatReader {
-	d.send_request(Method.get, '/containers/$id/logs?stdout=true&stderr=true')!
+	d.request(.get, '/containers/$id/logs', {
+		'stdout': 'true'
+		'stderr': 'true'
+	})
+	d.send()!
 	d.read_response_head()!
 	d.check_error()!
 
