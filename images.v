@@ -49,3 +49,9 @@ pub fn (mut d DockerConn) image_remove(id string) ! {
 	d.send()!
 	d.read_response()!
 }
+
+pub fn (mut d DockerConn) image_tag(name string, repo string, tag string) ! {
+    d.request(.post, '/images/$name/tag', {'repo': repo, 'tag': tag})
+    d.send()!
+    d.read_response()!
+}
