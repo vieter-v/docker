@@ -1,7 +1,6 @@
 module docker
 
 import time
-import net.http
 import types { ContainerListItem }
 
 [params]

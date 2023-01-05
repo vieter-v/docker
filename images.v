@@ -1,6 +1,5 @@
 module docker
 
-import net.http
 import types { Image }
 
 pub fn (mut d DockerConn) image_inspect(image string) !Image {
