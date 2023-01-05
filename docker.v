@@ -91,6 +91,20 @@ fn (mut d DockerConn) read_response_head() ! {
 }
 
 fn (mut d DockerConn) read_response_body() ! {
+    if d.head.status() == .no_content {
+        return
+    }
+
+	if d.head.header.get(http.CommonHeader.transfer_encoding) or { '' } == 'chunked' {
+		mut builder := strings.new_builder(1024)
+		mut body := d.get_chunked_response_reader()
+
+		util.reader_to_writer(mut body, mut builder)!
+		d.body = builder.str()
+
+        return
+	}
+
 	content_length := d.head.header.get(.content_length)!.int()
 
 	if content_length == 0 {
@@ -102,7 +116,7 @@ fn (mut d DockerConn) read_response_body() ! {
 	mut builder := strings.new_builder(docker.buf_len)
 
 	for builder.len < content_length {
-		c = d.reader.read(mut buf) or { break }
+		c = d.reader.read(mut buf)!
 
 		builder.write(buf[..c])!
 	}
@@ -111,32 +125,21 @@ fn (mut d DockerConn) read_response_body() ! {
 }
 
 // read_response is a convenience function which always consumes the entire
-// response & returns it. It should only be used when we're certain that the
-// result isn't too large.
+// response and loads it into memory. It should only be used when we're certain
+// that the result isn't too large, as even chunked responses will get fully
+// loaded into memory.
 fn (mut d DockerConn) read_response() ! {
 	d.read_response_head()!
 	d.check_error()!
-
-	// 204 means "No Content", so we can assume nothing follows after this
-	if d.head.status() == .no_content {
-		return
-	}
-
-	if d.head.header.get(http.CommonHeader.transfer_encoding) or { '' } == 'chunked' {
-		mut builder := strings.new_builder(1024)
-		mut body := d.get_chunked_response_reader()
-
-		util.reader_to_writer(mut body, mut builder)!
-		d.body = builder.str()
-	} else {
-		d.read_response_body()!
-	}
+    d.read_response_body()!
 }
 
+// read_json_response<T> is a convenience function that runs read_response
+// before parsing its contents, which is assumed to be JSON, into a struct.
 fn (mut d DockerConn) read_json_response<T>() !T {
 	d.read_response()!
 
-	mut data := json.decode(T, d.body)!
+	data := json.decode(T, d.body)!
 
 	//$for field in T.fields {
 	//$if field.typ is time.Time {
