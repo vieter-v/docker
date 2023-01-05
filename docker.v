@@ -62,6 +62,10 @@ fn (mut d DockerConn) read_response_head() ! {
 	d.head = http.parse_response(res.bytestr())!
 }
 
+// read_response_body consumes the rest of the HTTP response and stores it as
+// the response body. This function should only be called after
+// read_response_head. This function always reads the entire response into
+// memory, even if it's chunked.
 fn (mut d DockerConn) read_response_body() ! {
 	if d.head.status() == .no_content {
 		return
@@ -93,7 +97,7 @@ fn (mut d DockerConn) read_response_body() ! {
 	d.body = builder.str()
 }
 
-// read_response is a convenience function which always consumes the entire
+// read_response is a convenience function that always consumes the entire
 // response and loads it into memory. It should only be used when we're certain
 // that the result isn't too large, as even chunked responses will get fully
 // loaded into memory.
@@ -120,7 +124,7 @@ fn (mut d DockerConn) read_json_response<T>() !T {
 }
 
 // get_chunked_response_reader returns a ChunkedResponseReader using the socket
-// as reader.
+// as reader. This function should only be called after check_error.
 fn (mut d DockerConn) get_chunked_response_reader() &ChunkedResponseReader {
 	r := new_chunked_response_reader(d.reader)
 
@@ -128,7 +132,7 @@ fn (mut d DockerConn) get_chunked_response_reader() &ChunkedResponseReader {
 }
 
 // get_stream_format_reader returns a StreamFormatReader using the socket as
-// reader.
+// reader. This function should only be called after check_error.
 fn (mut d DockerConn) get_stream_format_reader() &StreamFormatReader {
 	r := new_chunked_response_reader(d.reader)
 	r2 := new_stream_format_reader(r)
@@ -144,7 +148,7 @@ pub:
 // check_error should be called after read_response_head. If the status code of
 // the response is an error, the body is consumed and the Docker HTTP error is
 // returned as a V error. If the status isn't the error, this function is a
-// no-op.
+// no-op, and the body can be read.
 fn (mut d DockerConn) check_error() ! {
 	if d.head.status().is_error() {
 		d.read_response_body()!
