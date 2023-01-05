@@ -1,6 +1,6 @@
 # =====CONFIG=====
 V_PATH ?= v
-V := $(V_PATH) -showcc
+V := $(V_PATH) -showcc -d use_openssl
 
 all: vdocker
 
@@ -9,6 +9,10 @@ all: vdocker
 .PHONY: vdocker
 vdocker:
 	$(V) -g -shared .
+
+.PHONY: c
+c:
+	$(V) -o docker.c .
 
 
 # =====DOCS=====

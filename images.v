@@ -2,13 +2,11 @@ module docker
 
 import net.http { Method }
 import types { Image }
-import json
 
 pub fn (mut d DockerConn) image_inspect(image string) !Image {
 	d.send_request(.get, '/images/$image/json')!
-	_, body := d.read_response()!
 
-	data := json.decode(Image, body)!
+	data := d.read_json_response<Image>()!
 
 	return data
 }
@@ -16,16 +14,8 @@ pub fn (mut d DockerConn) image_inspect(image string) !Image {
 // pull_image pulls the given image:tag.
 pub fn (mut d DockerConn) pull_image(image string, tag string) ! {
 	d.send_request(Method.post, '/images/create?fromImage=$image&tag=$tag')!
-	head := d.read_response_head()!
-
-	if head.status().is_error() {
-		content_length := head.header.get(.content_length)!.int()
-		body := d.read_response_body(content_length)!
-		mut err := json.decode(DockerError, body)!
-		err.status = head.status_code
-
-		return err
-	}
+	d.read_response_head()!
+	d.check_error()!
 
 	// Keep reading the body until the pull has completed
 	mut body := d.get_chunked_response_reader()
@@ -40,9 +30,7 @@ pub fn (mut d DockerConn) pull_image(image string, tag string) ! {
 // create_image_from_container creates a new image from a container.
 pub fn (mut d DockerConn) create_image_from_container(id string, repo string, tag string) !Image {
 	d.send_request(.post, '/commit?container=$id&repo=$repo&tag=$tag')!
-	_, body := d.read_response()!
-
-	data := json.decode(Image, body)!
+	data := d.read_json_response<Image>()!
 
 	return data
 }
