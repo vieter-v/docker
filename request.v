@@ -5,17 +5,13 @@ import net.urllib
 import io
 import json
 
-fn (mut d DockerConn) request(method http.Method, url string, params map[string]string) {
+fn (mut d DockerConn) request(method http.Method, url string) {
 	d.method = method
 	d.url = url
 	d.content_type = ''
 	d.body = ''
 
 	d.params.clear()
-
-	for key, value in params {
-		d.params[key] = urllib.query_escape(value.replace("'", '"'))
-	}
 }
 
 fn (mut d DockerConn) body(content_type string, body string) {
@@ -29,11 +25,17 @@ fn (mut d DockerConn) body_json<T>(data T) {
 }
 
 fn (mut d DockerConn) params<T>(o T) {
-	$for field in T.fields {
-		v := o.$(field.name)
+	$if T is map[string]string {
+		for key, value in o {
+			d.params[key] = urllib.query_escape(value.replace("'", '"'))
+		}
+	} $else {
+		$for field in T.fields {
+			v := o.$(field.name)
 
-		if !isnil(v) {
-			d.params[field.name] = urllib.query_escape(v.str().replace("'", '"'))
+			if !isnil(v) {
+				d.params[field.name] = urllib.query_escape(v.str().replace("'", '"'))
+			}
 		}
 	}
 }

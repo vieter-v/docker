@@ -3,7 +3,7 @@ module docker
 import types { Image }
 
 pub fn (mut d DockerConn) image_inspect(image string) !Image {
-	d.request(.get, '/images/$image/json', {})
+	d.request(.get, '/images/$image/json')
 	d.send()!
 
 	data := d.read_json_response<Image>()!
@@ -13,7 +13,8 @@ pub fn (mut d DockerConn) image_inspect(image string) !Image {
 
 // image_pull pulls the given image:tag.
 pub fn (mut d DockerConn) image_pull(image string, tag string) ! {
-	d.request(.post, '/images/create', {
+	d.request(.post, '/images/create')
+	d.params({
 		'fromImage': image
 		'tag':       tag
 	})
@@ -33,7 +34,8 @@ pub fn (mut d DockerConn) image_pull(image string, tag string) ! {
 
 // create_image_from_container creates a new image from a container.
 pub fn (mut d DockerConn) image_from_container(id string, repo string, tag string) !Image {
-	d.request(.post, '/commit', {
+	d.request(.post, '/commit')
+	d.params({
 		'container': id
 		'repo':      repo
 		'tag':       tag
@@ -45,13 +47,17 @@ pub fn (mut d DockerConn) image_from_container(id string, repo string, tag strin
 
 // remove_image removes the image with the given id.
 pub fn (mut d DockerConn) image_remove(id string) ! {
-	d.request(.delete, '/images/$id', {})
+	d.request(.delete, '/images/$id')
 	d.send()!
 	d.read_response()!
 }
 
 pub fn (mut d DockerConn) image_tag(name string, repo string, tag string) ! {
-    d.request(.post, '/images/$name/tag', {'repo': repo, 'tag': tag})
-    d.send()!
-    d.read_response()!
+	d.request(.post, '/images/$name/tag')
+	d.params({
+		'repo': repo
+		'tag':  tag
+	})
+	d.send()!
+	d.read_response()!
 }

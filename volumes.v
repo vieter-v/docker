@@ -17,7 +17,7 @@ struct VolumeListResponse {
 }
 
 pub fn (mut d DockerConn) volume_list() !VolumeListResponse {
-	d.request(.get, '/volumes', {})
+	d.request(.get, '/volumes')
 	d.send()!
 
 	mut data := d.read_json_response<VolumeListResponse>()!
