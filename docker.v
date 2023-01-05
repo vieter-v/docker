@@ -4,7 +4,6 @@ import net.unix
 import io
 import net.http
 import strings
-import net.urllib
 import json
 import util
 
@@ -27,7 +26,11 @@ mut:
 	url          string
 	params       map[string]string
 	content_type string
-	body         string
+	// Before send: body of the request
+	// After send: body of response
+	body string
+	// HTTP head of the response
+	head http.Response
 }
 
 // new_conn creates a new connection to the Docker daemon.
@@ -47,113 +50,71 @@ pub fn (mut d DockerConn) close() ! {
 	d.socket.close()!
 }
 
-// send_request sends an HTTP request without body.
-fn (mut d DockerConn) send_request(method http.Method, url_str string) ! {
-	url := urllib.parse('/$docker.api_version$url_str')!
-	req := '$method $url.request_uri() HTTP/1.1\nHost: localhost\n\n'
-
-	d.socket.write_string(req)!
-
-	// When starting a new request, the reader needs to be reset.
-	d.reader = io.new_buffered_reader(reader: d.socket)
-}
-
-// send_request_with_body sends an HTTP request with the given body.
-fn (mut d DockerConn) send_request_with_body(method http.Method, url_str string, content_type string, body string) ! {
-	url := urllib.parse('/$docker.api_version$url_str')!
-	req := '$method $url.request_uri() HTTP/1.1\nHost: localhost\nContent-Type: $content_type\nContent-Length: $body.len\n\n$body\n\n'
-
-	d.socket.write_string(req)!
-
-	// When starting a new request, the reader needs to be reset.
-	d.reader = io.new_buffered_reader(reader: d.socket)
-}
-
-// send_request_with_json<T> is a convenience wrapper around
-// send_request_with_body that encodes the input as JSON.
-fn (mut d DockerConn) send_request_with_json<T>(method http.Method, url_str string, data &T) ! {
-	body := json.encode(data)
-
-	return d.send_request_with_body(method, url_str, 'application/json', body)
-}
-
 // read_response_head consumes the socket's contents until it encounters
 // '\r\n\r\n', after which it parses the response as an HTTP response.
 // Importantly, this function never consumes the reader past the HTTP
 // separator, so the body can be read fully later on.
-fn (mut d DockerConn) read_response_head() !http.Response {
+fn (mut d DockerConn) read_response_head() ! {
 	mut res := []u8{}
 
 	util.read_until_separator(mut d.reader, mut res, docker.http_separator)!
 
-	return http.parse_response(res.bytestr())
+	d.head = http.parse_response(res.bytestr())!
 }
 
-// read_response_body reads `length` bytes from the stream. It can be used when
-// the response encoding isn't chunked to fully read it.
-fn (mut d DockerConn) read_response_body(length int) !string {
-	if length == 0 {
-		return ''
+// read_response_body consumes the rest of the HTTP response and stores it as
+// the response body. This function should only be called after
+// read_response_head. This function always reads the entire response into
+// memory, even if it's chunked.
+fn (mut d DockerConn) read_response_body() ! {
+	if d.head.status() == .no_content {
+		return
 	}
 
-	mut buf := []u8{len: docker.buf_len}
-	mut c := 0
 	mut builder := strings.new_builder(docker.buf_len)
 
-	for builder.len < length {
-		c = d.reader.read(mut buf) or { break }
+	if d.head.header.get(.transfer_encoding) or { '' } == 'chunked' {
+		mut body_stream := d.get_chunked_response_reader()
 
-		builder.write(buf[..c])!
+		util.reader_to_writer(mut body_stream, mut builder)!
+	} else {
+		content_length := d.head.header.get(.content_length)!.int()
+
+		if content_length == 0 {
+            d.body = ''
+
+			return
+		}
+
+		mut buf := []u8{len: docker.buf_len}
+		mut c := 0
+
+		for builder.len < content_length {
+			c = d.reader.read(mut buf)!
+
+			builder.write(buf[..c])!
+		}
 	}
 
-	return builder.str()
+	d.body = builder.str()
 }
 
-// read_response is a convenience function which always consumes the entire
-// response & returns it. It should only be used when we're certain that the
-// result isn't too large.
-fn (mut d DockerConn) read_response() !(http.Response, string) {
-	head := d.read_response_head()!
-
-	if head.status().is_error() {
-		content_length := head.header.get(.content_length)!.int()
-		body := d.read_response_body(content_length)!
-		mut err := json.decode(DockerError, body)!
-		err.status = head.status_code
-
-		return err
-	}
-
-	// 204 means "No Content", so we can assume nothing follows after this
-	if head.status() == .no_content {
-		return head, ''
-	}
-
-	if head.header.get(http.CommonHeader.transfer_encoding) or { '' } == 'chunked' {
-		mut builder := strings.new_builder(1024)
-		mut body := d.get_chunked_response_reader()
-
-		util.reader_to_writer(mut body, mut builder)!
-
-		return head, builder.str()
-	}
-
-	content_length := head.header.get(http.CommonHeader.content_length)!.int()
-	body := d.read_response_body(content_length)!
-
-	return head, body
+// read_response is a convenience function that always consumes the entire
+// response and loads it into memory. It should only be used when we're certain
+// that the result isn't too large, as even chunked responses will get fully
+// loaded into memory.
+fn (mut d DockerConn) read_response() ! {
+	d.read_response_head()!
+	d.check_error()!
+	d.read_response_body()!
 }
 
+// read_json_response<T> is a convenience function that runs read_response
+// before parsing its contents, which is assumed to be JSON, into a struct.
 fn (mut d DockerConn) read_json_response<T>() !T {
-	head, body := d.read_response()!
+	d.read_response()!
 
-	if head.status_code < 200 || head.status_code > 300 {
-		data := json.decode(DockerError, body)!
-
-		return docker_error(head.status_code, data.message)
-	}
-
-	mut data := json.decode(T, body)!
+	data := json.decode(T, d.body)!
 
 	//$for field in T.fields {
 	//$if field.typ is time.Time {
@@ -165,7 +126,7 @@ fn (mut d DockerConn) read_json_response<T>() !T {
 }
 
 // get_chunked_response_reader returns a ChunkedResponseReader using the socket
-// as reader.
+// as reader. This function should only be called after check_error.
 fn (mut d DockerConn) get_chunked_response_reader() &ChunkedResponseReader {
 	r := new_chunked_response_reader(d.reader)
 
@@ -173,10 +134,28 @@ fn (mut d DockerConn) get_chunked_response_reader() &ChunkedResponseReader {
 }
 
 // get_stream_format_reader returns a StreamFormatReader using the socket as
-// reader.
+// reader. This function should only be called after check_error.
 fn (mut d DockerConn) get_stream_format_reader() &StreamFormatReader {
 	r := new_chunked_response_reader(d.reader)
 	r2 := new_stream_format_reader(r)
 
 	return r2
+}
+
+struct DockerError {
+pub:
+	message string
+}
+
+// check_error should be called after read_response_head. If the status code of
+// the response is an error, the body is consumed and the Docker HTTP error is
+// returned as a V error. If the status isn't the error, this function is a
+// no-op, and the body can be read.
+fn (mut d DockerConn) check_error() ! {
+	if d.head.status().is_error() {
+		d.read_response_body()!
+		d_err := json.decode(DockerError, d.body)!
+
+		return error_with_code('$d.head.status(): $d_err.message', d.head.status_code)
+	}
 }

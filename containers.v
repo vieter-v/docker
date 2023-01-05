@@ -1,8 +1,6 @@
 module docker
 
-import json
 import time
-import net.http { Method }
 import types { ContainerListItem }
 
 [params]
@@ -14,7 +12,7 @@ pub struct ContainerListConfig {
 }
 
 pub fn (mut d DockerConn) container_list(c ContainerListConfig) ![]ContainerListItem {
-	d.get('/containers/json')
+	d.request(.get, '/containers/json')
 	d.params(c)
 	d.send()!
 
@@ -37,30 +35,18 @@ pub:
 }
 
 pub fn (mut d DockerConn) container_create(c NewContainer) !CreatedContainer {
-	d.send_request_with_json(Method.post, '/containers/create', c)!
-	head, res := d.read_response()!
+	d.request(.post, '/containers/create')
+	d.body_json(c)
+	d.send()!
 
-	if head.status_code != 201 {
-		data := json.decode(DockerError, res)!
-
-		return error(data.message)
-	}
-
-	data := json.decode(CreatedContainer, res)!
-
-	return data
+	return d.read_json_response<CreatedContainer>()
 }
 
 // start_container starts the container with the given id.
 pub fn (mut d DockerConn) container_start(id string) ! {
-	d.send_request(Method.post, '/containers/$id/start')!
-	head, body := d.read_response()!
-
-	if head.status_code != 204 {
-		data := json.decode(DockerError, body)!
-
-		return error(data.message)
-	}
+	d.request(.post, '/containers/$id/start')
+	d.send()!
+	d.read_response()!
 }
 
 struct ContainerInspect {
@@ -82,16 +68,10 @@ pub mut:
 }
 
 pub fn (mut d DockerConn) container_inspect(id string) !ContainerInspect {
-	d.send_request(Method.get, '/containers/$id/json')!
-	head, body := d.read_response()!
+	d.request(.get, '/containers/$id/json')
+	d.send()!
 
-	if head.status_code != 200 {
-		data := json.decode(DockerError, body)!
-
-		return error(data.message)
-	}
-
-	mut data := json.decode(ContainerInspect, body)!
+	mut data := d.read_json_response<ContainerInspect>()!
 
 	// The Docker engine API *should* always return UTC time.
 	data.state.start_time = time.parse_rfc3339(data.state.start_time_str)!
@@ -104,27 +84,20 @@ pub fn (mut d DockerConn) container_inspect(id string) !ContainerInspect {
 }
 
 pub fn (mut d DockerConn) container_remove(id string) ! {
-	d.send_request(Method.delete, '/containers/$id')!
-	head, body := d.read_response()!
-
-	if head.status_code != 204 {
-		data := json.decode(DockerError, body)!
-
-		return error(data.message)
-	}
+	d.request(.delete, '/containers/$id')
+	d.send()!
+	d.read_response()!
 }
 
 pub fn (mut d DockerConn) container_get_logs(id string) !&StreamFormatReader {
-	d.send_request(Method.get, '/containers/$id/logs?stdout=true&stderr=true')!
-	head := d.read_response_head()!
-
-	if head.status_code != 200 {
-		content_length := head.header.get(http.CommonHeader.content_length)!.int()
-		body := d.read_response_body(content_length)!
-		data := json.decode(DockerError, body)!
-
-		return error(data.message)
-	}
+	d.request(.get, '/containers/$id/logs')
+	d.params({
+		'stdout': 'true'
+		'stderr': 'true'
+	})
+	d.send()!
+	d.read_response_head()!
+	d.check_error()!
 
 	return d.get_stream_format_reader()
 }

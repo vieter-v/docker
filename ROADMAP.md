@@ -42,7 +42,7 @@ reference](https://docs.docker.com/engine/api/v1.41/).
     - [ ] Inspect an image
     - [ ] Get the history of an image
     - [ ] Push an image
-    - [ ] Tag an image
+    - [x] Tag an image
     - [ ] Remove an image
     - [ ] Search images
     - [ ] Delete unused images
