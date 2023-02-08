@@ -1,3 +1,6 @@
+variables:
+  - &vlang_image 'git.rustybever.be/chewing_bever/vlang:0.3.3-alpine3.17'
+
 branches:
   exclude: [ main ]
 
@@ -5,14 +8,14 @@ platform: 'linux/amd64'
 
 pipeline:
   build:
-    image: 'git.rustybever.be/chewing_bever/vlang:0.3.2'
+    image: *vlang_image
     commands:
       - make
     when:
       event: [ push ]
 
   lint:
-    image: 'git.rustybever.be/chewing_bever/vlang:0.3.2'
+    image: *vlang_image
     commands:
       - make lint
     when:
