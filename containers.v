@@ -16,7 +16,7 @@ pub fn (mut d DockerConn) container_list(c ContainerListConfig) ![]ContainerList
 	d.params(c)
 	d.send()!
 
-	return d.read_json_response<[]ContainerListItem>()
+	return d.read_json_response[[]ContainerListItem]()
 }
 
 pub struct NewContainer {
@@ -39,12 +39,12 @@ pub fn (mut d DockerConn) container_create(c NewContainer) !CreatedContainer {
 	d.body_json(c)
 	d.send()!
 
-	return d.read_json_response<CreatedContainer>()
+	return d.read_json_response[CreatedContainer]()
 }
 
 // start_container starts the container with the given id.
 pub fn (mut d DockerConn) container_start(id string) ! {
-	d.request(.post, '/containers/$id/start')
+	d.request(.post, '/containers/${id}/start')
 	d.send()!
 	d.read_response()!
 }
@@ -68,10 +68,10 @@ pub mut:
 }
 
 pub fn (mut d DockerConn) container_inspect(id string) !ContainerInspect {
-	d.request(.get, '/containers/$id/json')
+	d.request(.get, '/containers/${id}/json')
 	d.send()!
 
-	mut data := d.read_json_response<ContainerInspect>()!
+	mut data := d.read_json_response[ContainerInspect]()!
 
 	// The Docker engine API *should* always return UTC time.
 	data.state.start_time = time.parse_rfc3339(data.state.start_time_str)!
@@ -84,13 +84,13 @@ pub fn (mut d DockerConn) container_inspect(id string) !ContainerInspect {
 }
 
 pub fn (mut d DockerConn) container_remove(id string) ! {
-	d.request(.delete, '/containers/$id')
+	d.request(.delete, '/containers/${id}')
 	d.send()!
 	d.read_response()!
 }
 
 pub fn (mut d DockerConn) container_get_logs(id string) !&StreamFormatReader {
-	d.request(.get, '/containers/$id/logs')
+	d.request(.get, '/containers/${id}/logs')
 	d.params({
 		'stdout': 'true'
 		'stderr': 'true'

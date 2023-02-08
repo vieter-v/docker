@@ -81,7 +81,7 @@ fn (mut d DockerConn) read_response_body() ! {
 		content_length := d.head.header.get(.content_length)!.int()
 
 		if content_length == 0 {
-            d.body = ''
+			d.body = ''
 
 			return
 		}
@@ -111,7 +111,7 @@ fn (mut d DockerConn) read_response() ! {
 
 // read_json_response<T> is a convenience function that runs read_response
 // before parsing its contents, which is assumed to be JSON, into a struct.
-fn (mut d DockerConn) read_json_response<T>() !T {
+fn (mut d DockerConn) read_json_response[T]() !T {
 	d.read_response()!
 
 	data := json.decode(T, d.body)!
@@ -156,6 +156,6 @@ fn (mut d DockerConn) check_error() ! {
 		d.read_response_body()!
 		d_err := json.decode(DockerError, d.body)!
 
-		return error_with_code('$d.head.status(): $d_err.message', d.head.status_code)
+		return error_with_code('${d.head.status()}: ${d_err.message}', d.head.status_code)
 	}
 }

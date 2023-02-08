@@ -3,10 +3,10 @@ module docker
 import types { Image }
 
 pub fn (mut d DockerConn) image_inspect(image string) !Image {
-	d.request(.get, '/images/$image/json')
+	d.request(.get, '/images/${image}/json')
 	d.send()!
 
-	data := d.read_json_response<Image>()!
+	data := d.read_json_response[Image]()!
 
 	return data
 }
@@ -42,18 +42,18 @@ pub fn (mut d DockerConn) image_from_container(id string, repo string, tag strin
 	})
 	d.send()!
 
-	return d.read_json_response<Image>()!
+	return d.read_json_response[Image]()!
 }
 
 // remove_image removes the image with the given id.
 pub fn (mut d DockerConn) image_remove(id string) ! {
-	d.request(.delete, '/images/$id')
+	d.request(.delete, '/images/${id}')
 	d.send()!
 	d.read_response()!
 }
 
 pub fn (mut d DockerConn) image_tag(name string, repo string, tag string) ! {
-	d.request(.post, '/images/$name/tag')
+	d.request(.post, '/images/${name}/tag')
 	d.params({
 		'repo': repo
 		'tag':  tag
