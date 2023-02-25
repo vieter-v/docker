@@ -41,10 +41,16 @@ fn (mut d DockerConn) params[T](o T) {
 }
 
 fn (mut d DockerConn) send() ! {
-	mut full_url := d.url
+	mut full_url := '/${docker.api_version}${d.url}'
 
 	if d.params.len > 0 {
-		params_str := d.params.keys().map('${it}=${d.params[it]}').join('&')
+		mut fields := []string{cap: d.params.len}
+
+		for key, value in d.params {
+			fields << '${key}=${value}'
+		}
+		params_str := fields.join('&')
+		// params_str := d.params.keys().map('${it}=${d.params[it]}').join('&')
 		full_url += '?${params_str}'
 	}
 
