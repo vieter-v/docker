@@ -40,6 +40,7 @@ pub fn (mut d DockerConn) image_from_container(id string, repo string, tag strin
 		'repo':      repo
 		'tag':       tag
 	})
+    d.body('application/json', '{}')
 	d.send()!
 
 	return d.read_json_response[Image]()!
