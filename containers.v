@@ -89,6 +89,12 @@ pub fn (mut d DockerConn) container_remove(id string) ! {
 	d.read_response()!
 }
 
+pub fn (mut d DockerConn) container_kill(id string) ! {
+	d.request(.post, '/containers/${id}/kill')
+	d.send()!
+	d.read_response()!
+}
+
 pub fn (mut d DockerConn) container_get_logs(id string) !&StreamFormatReader {
 	d.request(.get, '/containers/${id}/logs')
 	d.params({

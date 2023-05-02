@@ -20,7 +20,7 @@ reference](https://docs.docker.com/engine/api/v1.41/).
     - [ ] Start a container
     - [ ] Stop a container
     - [ ] Restart a container
-    - [ ] Kill a container
+    - [x] Kill a container
     - [ ] Update a container
     - [ ] Rename a container
     - [ ] Pause a container
